@@ -1,0 +1,133 @@
+name: 'CHWEB Social'
+slug: cw-social
+type: plugin
+version: 1.5.0
+description: 'Shares pages automatically on Facebook (link post) and Instagram (cover image with text) through the Meta Graph API. The configuration decides which pages qualify; the state is kept in the page itself, so nothing goes out twice.'
+icon: share-nodes
+author:
+  name: 'CHWEB GmbH'
+  email: 'info@chweb.ch'
+  url: 'https://chweb.ch'
+homepage: 'https://chweb.ch'
+bugs: 'https://github.com/chwebcloud/grav-plugin-cw-social/issues'
+docs: 'https://github.com/chwebcloud/grav-plugin-cw-social/blob/main/README.md'
+keywords: facebook, instagram, social, autopost, meta graph api, news, events, chweb
+license: MIT
+
+# Grav-Major-Versionen, gegen die geprueft wurde. GPM und der
+# Migrations-Assistent lesen dieses Feld; ein Plugin, das eine Version nicht
+# nennt, kann dort als unvertraeglich gemeldet werden.
+#
+# NUR 1.7 UND 2.0, vereinheitlicht am 17.08.2026. Grav 1.8 kam nie ueber Beta
+# hinaus -- der Kern-CHANGELOG endet bei 1.8.0-beta.30 (15.04.2026), waehrend
+# die 1.7 mit 1.7.53 (16.06.2026) danach weiterlief. Kein Fremdplugin nennt
+# 1.8; neun nennen 1.7+2.0, darunter Gravs eigene.
+compatibility:
+  grav:
+    - '1.7'
+    - '2.0'
+
+dependencies:
+  - { name: grav, version: '>=1.7.0' }
+
+form:
+  validation: loose
+  fields:
+
+    enabled:
+      type: toggle
+      label: PLUGIN_CW_SOCIAL.ENABLED_LABEL
+      highlight: 1
+      default: 0
+      options: { 1: PLUGIN_CW_SOCIAL.ENABLED, 0: PLUGIN_CW_SOCIAL.DISABLED }
+      validate: { type: bool }
+
+    fb_section:
+      type: section
+      title: PLUGIN_CW_SOCIAL.FB_SECTION_TITLE
+      underline: true
+
+    page_id:
+      type: text
+      label: PLUGIN_CW_SOCIAL.PAGE_ID_LABEL
+      help: PLUGIN_CW_SOCIAL.PAGE_ID_HELP
+      size: medium
+    access_token:
+      type: password
+      label: PLUGIN_CW_SOCIAL.ACCESS_TOKEN_LABEL
+      help: PLUGIN_CW_SOCIAL.ACCESS_TOKEN_HELP
+      size: large
+    api_version:
+      type: text
+      label: PLUGIN_CW_SOCIAL.API_VERSION_LABEL
+      default: 'v21.0'
+      size: x-small
+
+    ig_section:
+      type: section
+      title: PLUGIN_CW_SOCIAL.IG_SECTION_TITLE
+      underline: true
+
+    instagram:
+      type: toggle
+      label: PLUGIN_CW_SOCIAL.INSTAGRAM_LABEL
+      help: PLUGIN_CW_SOCIAL.INSTAGRAM_HELP
+      highlight: 1
+      default: 0
+      options: { 1: PLUGIN_CW_SOCIAL.YES_OPTION, 0: PLUGIN_CW_SOCIAL.NO_OPTION }
+      validate: { type: bool }
+    ig_user_id:
+      type: text
+      label: PLUGIN_CW_SOCIAL.IG_USER_ID_LABEL
+      help: PLUGIN_CW_SOCIAL.IG_USER_ID_HELP
+      size: medium
+
+    pages_section:
+      type: section
+      title: PLUGIN_CW_SOCIAL.PAGES_SECTION_TITLE
+      underline: true
+
+    routes:
+      type: text
+      label: PLUGIN_CW_SOCIAL.ROUTES_LABEL
+      help: PLUGIN_CW_SOCIAL.ROUTES_HELP
+      default: '/news'
+      size: medium
+    templates:
+      type: text
+      label: PLUGIN_CW_SOCIAL.TEMPLATES_LABEL
+      help: PLUGIN_CW_SOCIAL.TEMPLATES_HELP
+      default: 'item'
+      size: medium
+
+    behavior_section:
+      type: section
+      title: PLUGIN_CW_SOCIAL.BEHAVIOR_SECTION_TITLE
+      underline: true
+
+    auto_share:
+      type: toggle
+      label: PLUGIN_CW_SOCIAL.AUTO_SHARE_LABEL
+      help: PLUGIN_CW_SOCIAL.AUTO_SHARE_HELP
+      highlight: 1
+      default: 1
+      options: { 1: PLUGIN_CW_SOCIAL.YES_OPTION, 0: PLUGIN_CW_SOCIAL.NO_OPTION }
+      validate: { type: bool }
+    throttle_minutes:
+      type: number
+      label: PLUGIN_CW_SOCIAL.THROTTLE_MINUTES_LABEL
+      default: 5
+      size: x-small
+      validate: { type: int, min: 1 }
+    site_url:
+      type: text
+      label: PLUGIN_CW_SOCIAL.SITE_URL_LABEL
+      help: PLUGIN_CW_SOCIAL.SITE_URL_HELP
+      placeholder: PLUGIN_CW_SOCIAL.SITE_URL_PLACEHOLDER
+      size: medium
+    message_template:
+      type: textarea
+      label: PLUGIN_CW_SOCIAL.MESSAGE_TEMPLATE_LABEL
+      help: PLUGIN_CW_SOCIAL.MESSAGE_TEMPLATE_HELP
+      rows: 3
+      default: "{title}\n\n{summary}"

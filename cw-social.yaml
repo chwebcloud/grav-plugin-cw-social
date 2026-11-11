@@ -1,0 +1,28 @@
+enabled: false
+
+# ── Facebook (Meta Graph API) ──────────────────────────────
+# Page-ID + langlebiger Page-Access-Token: im Admin eintragen.
+page_id: ''
+access_token: ''
+api_version: 'v21.0'
+
+# ── Instagram ──────────────────────────────────────────────
+# Braucht ein Instagram-Business-Konto, das mit der Facebook-Seite
+# verbunden ist, und denselben Token mit instagram_basic +
+# instagram_content_publish. Die Konto-ID holt das Plugin selbst ueber die
+# Seite; ig_user_id nur eintragen, wenn das nicht klappt.
+instagram: false
+ig_user_id: ''
+
+# ── Welche Seiten ──────────────────────────────────────────
+# Elternseiten, deren Kinder geteilt werden koennen, und deren Seitentypen.
+# Mehrere mit Komma: '/news, /events' bzw. 'item, event'.
+routes: '/news'
+templates: 'item'
+
+# ── Verhalten ──────────────────────────────────────────────
+auto_share: true          # laufzeit-getriebener Worker (gedrosselt)
+throttle_minutes: 5       # hoechstens alle N Minuten pruefen
+site_url: ''              # z. B. https://example.com — NIE localhost
+# Platzhalter: {title} {summary} {url} {datum}  ({datum}: Kopffeld datum oder Seitendatum)
+message_template: "{title}\n\n{summary}"

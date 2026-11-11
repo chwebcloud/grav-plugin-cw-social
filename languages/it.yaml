@@ -1,0 +1,46 @@
+PLUGIN_CW_SOCIAL:
+  TAB: 'Condividi'
+  SECTION: 'Social media (CHWEB Social)'
+  HINT: 'Scegli se questa pagina compare su Facebook e Instagram dopo il salvataggio. Avviene automaticamente entro pochi minuti, non appena la pagina è pubblicata e la sua data è raggiunta. L’anteprima qui sotto mostra il post in anticipo.'
+  SHARE_LABEL: 'Condividi su Facebook'
+  SHARE_HELP: 'Sì: dopo il salvataggio compare un post con link sulla pagina Facebook. Facebook prende immagine e titolo da questa pagina.'
+  INSTAGRAM_LABEL: 'Condividi su Instagram'
+  INSTAGRAM_HELP: 'Sì: dopo il salvataggio compare l’immagine di copertina con il testo su Instagram. Senza immagine nessun post. Instagram non rende cliccabile il link; appare come testo.'
+  MESSAGE_LABEL: 'Testo personalizzato (opzionale)'
+  MESSAGE_HELP: 'Vuoto: titolo e introduzione, come nell’anteprima qui sotto. Vale per entrambi i canali.'
+  VORSCHAU_LABEL: 'Anteprima del post'
+  VORSCHAU_HELP: 'Segue ogni modifica a titolo, introduzione, data, immagine, testo e interruttori – prima del salvataggio. Sopra: se e quando è già stato condiviso.'
+  ERNEUT_LABEL: 'Condividi di nuovo'
+  ERNEUT_HELP: 'Sì: al prossimo salvataggio il post esce di nuovo sui canali attivati – per esempio come promemoria poco prima dell’evento. L’interruttore torna poi su No.'
+  ENABLED_LABEL: "Plugin attivato"
+  FB_SECTION_TITLE: "Facebook (Meta Graph API)"
+  PAGE_ID_LABEL: "ID della pagina Facebook"
+  PAGE_ID_HELP: "L'ID numerico della pagina Facebook (Pagina → Informazioni → ID pagina)."
+  ACCESS_TOKEN_LABEL: "Token di accesso della pagina"
+  ACCESS_TOKEN_HELP: "Token di pagina a lunga durata dall'app Meta (Graph API Explorer → Page Token). Viene inviato solo a graph.facebook.com. Per Instagram servono inoltre instagram_basic e instagram_content_publish."
+  API_VERSION_LABEL: "Versione dell'API"
+  IG_SECTION_TITLE: "Instagram"
+  IG_USER_ID_LABEL: "ID dell'account Instagram (facoltativo)"
+  IG_USER_ID_HELP: "Lasciare vuoto: il plugin legge l'ID dell'account collegato tramite la pagina Facebook. Inserirlo solo se il test non trova l'account."
+  PAGES_SECTION_TITLE: "Quali pagine"
+  ROUTES_LABEL: "Pagine principali (percorsi)"
+  ROUTES_HELP: "I figli di queste pagine possono essere condivisi. Separare più voci con virgole, per esempio /news, /events"
+  TEMPLATES_LABEL: "Tipi di pagina"
+  TEMPLATES_HELP: "Solo le pagine di questi modelli ricevono la scheda «Condividi». Separare più voci con virgole, per esempio item, event"
+  BEHAVIOR_SECTION_TITLE: "Comportamento"
+  AUTO_SHARE_LABEL: "Condividere automaticamente"
+  AUTO_SHARE_HELP: "Verifica di continuo (in modo limitato) se le pagine pubblicate sono da condividere e le pubblica. In alternativa solo via CLI o cron: bin/plugin cw-social share --force"
+  THROTTLE_MINUTES_LABEL: "Intervallo di verifica (minuti)"
+  SITE_URL_LABEL: "URL pubblico del sito"
+  SITE_URL_HELP: "La base per i link pubblicati e per l'immagine di Instagram, per esempio https://example.com — IMPORTANTE: mai localhost, mai un dominio di prova."
+  SITE_URL_PLACEHOLDER: "https://example.com"
+  MESSAGE_TEMPLATE_LABEL: "Modello di testo"
+  MESSAGE_TEMPLATE_HELP: "Segnaposto: {title}, {summary}, {url}, {datum}. Si possono sovrascrivere per singola pagina. Su Instagram il plugin aggiunge il link come testo."
+  ENABLED: "Attivato"
+  DISABLED: "Disattivato"
+  YES_OPTION: "Sì"
+  NO_OPTION: "No"
+  HINWEIS_FB_OFFEN: "Nessuna pagina Facebook ancora collegata (Plugins → CHWEB Social). L’anteprima è corretta, ma non viene pubblicato nulla."
+  HINWEIS_IG_BILD: "Instagram ha bisogno di un’immagine sulla pagina (immagine di copertina o prima immagine)."
+  HINWEIS_ERNEUT: "«Condividi di nuovo» è su Sì: dopo il salvataggio il post esce di nuovo sui canali attivi."
+  HINWEIS_ENTWURF: "Questa pagina è una bozza: viene condivisa quando la bozza viene tolta."

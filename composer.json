@@ -1,0 +1,17 @@
+{
+    "name": "chweb/cw-social",
+    "type": "grav-plugin",
+    "description": "Auto-share Grav news articles to social media (stage 1: Facebook Page via Meta Graph API).",
+    "keywords": ["grav", "plugin", "facebook", "social", "autopost", "chweb"],
+    "license": "MIT",
+    "authors": [
+        { "name": "Thomas von CHWEB", "email": "info@chweb.ch", "homepage": "https://chweb.ch" }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*"
+    },
+    "autoload": {
+        "psr-4": { "Grav\\Plugin\\CwSocial\\": "classes/" }
+    }
+}

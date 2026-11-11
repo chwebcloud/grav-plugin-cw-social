@@ -1,0 +1,46 @@
+PLUGIN_CW_SOCIAL:
+  TAB: 'Partager'
+  SECTION: 'Réseaux sociaux (CHWEB Social)'
+  HINT: 'Choisissez si cette page apparaît sur Facebook et Instagram après l’enregistrement. Cela se fait automatiquement en quelques minutes, dès que la page est publiée et que sa date est atteinte. L’aperçu ci-dessous montre la publication à l’avance.'
+  SHARE_LABEL: 'Partager sur Facebook'
+  SHARE_HELP: 'Oui : après l’enregistrement, une publication avec lien apparaît sur la page Facebook. Facebook reprend l’image et le titre de cette page.'
+  INSTAGRAM_LABEL: 'Partager sur Instagram'
+  INSTAGRAM_HELP: 'Oui : après l’enregistrement, l’image de couverture avec le texte apparaît sur Instagram. Sans image, pas de publication. Instagram ne rend pas le lien cliquable ; il figure en texte.'
+  MESSAGE_LABEL: 'Texte personnalisé (optionnel)'
+  MESSAGE_HELP: 'Vide : titre et introduction, comme dans l’aperçu ci-dessous. Valable pour les deux canaux.'
+  VORSCHAU_LABEL: 'Aperçu de la publication'
+  VORSCHAU_HELP: 'Suit chaque modification du titre, de l’introduction, de la date, de l’image, du texte et des interrupteurs – avant l’enregistrement. Au-dessus : si et quand la page a déjà été partagée.'
+  ERNEUT_LABEL: 'Partager à nouveau'
+  ERNEUT_HELP: 'Oui : au prochain enregistrement, la publication repart sur les canaux activés – par exemple comme rappel peu avant l’événement. L’interrupteur revient ensuite sur Non.'
+  ENABLED_LABEL: "Extension activée"
+  FB_SECTION_TITLE: "Facebook (Meta Graph API)"
+  PAGE_ID_LABEL: "ID de la page Facebook"
+  PAGE_ID_HELP: "L'ID numérique de la page Facebook (Page → Informations → ID de la page)."
+  ACCESS_TOKEN_LABEL: "Jeton d'accès de la page"
+  ACCESS_TOKEN_HELP: "Jeton de page longue durée issu de l'application Meta (Graph API Explorer → Page Token). Il n'est envoyé qu'à graph.facebook.com. Pour Instagram, il lui faut en plus instagram_basic et instagram_content_publish."
+  API_VERSION_LABEL: "Version de l'API"
+  IG_SECTION_TITLE: "Instagram"
+  IG_USER_ID_LABEL: "ID du compte Instagram (facultatif)"
+  IG_USER_ID_HELP: "Laissez vide: l'extension lit l'ID du compte relié via la page Facebook. Ne le renseignez que si le test ne trouve pas le compte."
+  PAGES_SECTION_TITLE: "Quelles pages"
+  ROUTES_LABEL: "Pages parentes (routes)"
+  ROUTES_HELP: "Les enfants de ces pages peuvent être partagés. Séparez-en plusieurs par des virgules, par exemple /news, /events"
+  TEMPLATES_LABEL: "Types de page"
+  TEMPLATES_HELP: "Seules les pages de ces gabarits reçoivent l'onglet «Partager». Séparez-en plusieurs par des virgules, par exemple item, event"
+  BEHAVIOR_SECTION_TITLE: "Comportement"
+  AUTO_SHARE_LABEL: "Partager automatiquement"
+  AUTO_SHARE_HELP: "Vérifie en continu (de manière limitée) si des pages publiées sont dues, puis les publie. Sinon uniquement via CLI ou cron: bin/plugin cw-social share --force"
+  THROTTLE_MINUTES_LABEL: "Intervalle de vérification (minutes)"
+  SITE_URL_LABEL: "URL publique du site"
+  SITE_URL_HELP: "La base des liens publiés et de l'image Instagram, par exemple https://example.com — IMPORTANT: jamais localhost, jamais un domaine de test."
+  SITE_URL_PLACEHOLDER: "https://example.com"
+  MESSAGE_TEMPLATE_LABEL: "Modèle de texte"
+  MESSAGE_TEMPLATE_HELP: "Jetons: {title}, {summary}, {url}, {datum}. Peuvent être remplacés page par page. Sur Instagram, l'extension ajoute le lien sous forme de texte."
+  ENABLED: "Activé"
+  DISABLED: "Désactivé"
+  YES_OPTION: "Oui"
+  NO_OPTION: "Non"
+  HINWEIS_FB_OFFEN: "Aucune page Facebook connectée pour l’instant (Plugins → CHWEB Social). L’aperçu est exact, mais rien n’est publié."
+  HINWEIS_IG_BILD: "Instagram a besoin d’une image sur la page (image de couverture ou première image)."
+  HINWEIS_ERNEUT: "« Partager à nouveau » est sur Oui : après l’enregistrement, la publication repart sur les canaux activés."
+  HINWEIS_ENTWURF: "Cette page est un brouillon : elle sera publiée une fois le brouillon levé."

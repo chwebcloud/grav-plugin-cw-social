@@ -1,0 +1,46 @@
+PLUGIN_CW_SOCIAL:
+  TAB: 'Teilen'
+  SECTION: 'Social Media (CHWEB Social)'
+  HINT: 'Hier stellst du ein, ob dieser Anlass nach dem Speichern auf Facebook und Instagram erscheint. Das passiert von selbst, innert weniger Minuten – sobald die Seite veröffentlicht ist und ihr Datum erreicht hat. Unten siehst du vorher, wie der Beitrag aussieht.'
+  SHARE_LABEL: 'Auf Facebook teilen'
+  SHARE_HELP: 'Ja: Nach dem Speichern erscheint ein Beitrag mit Link auf der Facebook-Seite. Bild und Titel holt Facebook von dieser Seite.'
+  INSTAGRAM_LABEL: 'Auf Instagram teilen'
+  INSTAGRAM_HELP: 'Ja: Nach dem Speichern erscheint das Titelbild mit dem Text auf Instagram. Ohne Bild gibt es keinen Beitrag. Instagram macht den Link nicht anklickbar, er steht als Text dabei.'
+  MESSAGE_LABEL: 'Eigener Text (optional)'
+  MESSAGE_HELP: 'Leer: Titel und Einleitung, so wie in der Vorschau unten. Gilt für beide Kanäle.'
+  VORSCHAU_LABEL: 'So sieht der Beitrag aus'
+  VORSCHAU_HELP: 'Folgt jeder Änderung an Titel, Einleitung, Datum, Titelbild, eigenem Text und den Schaltern – noch vor dem Speichern. Darüber steht, ob und wann schon geteilt wurde.'
+  ERNEUT_LABEL: 'Nochmals teilen'
+  ERNEUT_HELP: 'Ja: Beim nächsten Speichern geht der Beitrag auf den eingeschalteten Kanälen nochmals raus – zum Beispiel als Erinnerung kurz vor dem Anlass. Der Schalter springt danach von selbst auf Nein.'
+  ENABLED_LABEL: "Plugin aktiviert"
+  FB_SECTION_TITLE: "Facebook (Meta Graph API)"
+  PAGE_ID_LABEL: "Facebook Page-ID"
+  PAGE_ID_HELP: "Die numerische ID der Facebook-Seite (Seite -> Info -> Seiten-ID)."
+  ACCESS_TOKEN_LABEL: "Page Access Token"
+  ACCESS_TOKEN_HELP: "Langlebiger Page-Token aus der Meta-App (Graph API Explorer -> Page Token). Wird nur zu graph.facebook.com gesendet. Fuer Instagram braucht er zusaetzlich instagram_basic und instagram_content_publish."
+  API_VERSION_LABEL: "API-Version"
+  IG_SECTION_TITLE: "Instagram"
+  IG_USER_ID_LABEL: "Instagram-Konto-ID (optional)"
+  IG_USER_ID_HELP: "Leer lassen: das Plugin liest die ID des verbundenen Kontos ueber die Facebook-Seite. Nur eintragen, wenn der Test das Konto nicht findet."
+  PAGES_SECTION_TITLE: "Welche Seiten"
+  ROUTES_LABEL: "Elternseiten (Routen)"
+  ROUTES_HELP: "Die Kinder dieser Seiten koennen geteilt werden. Mehrere mit Komma, z. B. /news, /events"
+  TEMPLATES_LABEL: "Seitentypen"
+  TEMPLATES_HELP: "Nur Seiten dieser Vorlagen bekommen den Reiter «Teilen». Mehrere mit Komma, z. B. item, event"
+  BEHAVIOR_SECTION_TITLE: "Verhalten"
+  AUTO_SHARE_LABEL: "Automatisch teilen"
+  AUTO_SHARE_HELP: "Prueft laufend (gedrosselt), ob freigegebene Seiten faellig sind, und postet sie. Alternativ nur per CLI/Cron: bin/plugin cw-social share --force"
+  THROTTLE_MINUTES_LABEL: "Pruef-Intervall (Minuten)"
+  SITE_URL_LABEL: "Oeffentliche Site-URL"
+  SITE_URL_HELP: "Basis fuer die geposteten Links und das Instagram-Bild, z. B. https://example.com — WICHTIG: nie localhost, nie eine Testdomain."
+  SITE_URL_PLACEHOLDER: "https://example.com"
+  MESSAGE_TEMPLATE_LABEL: "Text-Vorlage"
+  MESSAGE_TEMPLATE_HELP: "Platzhalter: {title}, {summary}, {url}, {datum}. Je Seite uebersteuerbar. Bei Instagram haengt das Plugin den Link als Text an."
+  ENABLED: "Aktiviert"
+  DISABLED: "Deaktiviert"
+  YES_OPTION: "Ja"
+  NO_OPTION: "Nein"
+  HINWEIS_FB_OFFEN: "Facebook-Seite noch nicht verbunden (Plugins → CHWEB Social). Die Vorschau stimmt, geteilt wird noch nichts."
+  HINWEIS_IG_BILD: "Instagram braucht ein Bild auf der Seite (Titelbild oder erstes Bild)."
+  HINWEIS_ERNEUT: "«Nochmals teilen» steht auf Ja: Nach dem Speichern geht der Beitrag auf den eingeschalteten Kanälen nochmals raus."
+  HINWEIS_ENTWURF: "Die Seite ist ein Entwurf: geteilt wird erst, wenn der Entwurf aufgehoben ist."

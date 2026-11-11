@@ -1,0 +1,46 @@
+PLUGIN_CW_SOCIAL:
+  TAB: 'Share'
+  SECTION: 'Social media (CHWEB Social)'
+  HINT: 'Choose whether this page appears on Facebook and Instagram after saving. It happens automatically within a few minutes – once the page is published and its date has arrived. The preview below shows the post beforehand.'
+  SHARE_LABEL: 'Share on Facebook'
+  SHARE_HELP: 'Yes: After saving, a link post appears on the Facebook page. Facebook takes image and title from this page.'
+  INSTAGRAM_LABEL: 'Share on Instagram'
+  INSTAGRAM_HELP: 'Yes: After saving, the cover image with the text appears on Instagram. No image, no post. Instagram does not make the link clickable; it is shown as text.'
+  MESSAGE_LABEL: 'Custom text (optional)'
+  MESSAGE_HELP: 'Empty: title and summary, as shown in the preview below. Used for both channels.'
+  VORSCHAU_LABEL: 'How the post will look'
+  VORSCHAU_HELP: 'Follows every change to title, summary, date, cover image, custom text and the switches – before saving. Above it: whether and when it was already shared.'
+  ERNEUT_LABEL: 'Share again'
+  ERNEUT_HELP: 'Yes: On the next save the post goes out again on the enabled channels – for example as a reminder shortly before the event. The switch resets to No afterwards.'
+  ENABLED_LABEL: "Plugin enabled"
+  FB_SECTION_TITLE: "Facebook (Meta Graph API)"
+  PAGE_ID_LABEL: "Facebook page ID"
+  PAGE_ID_HELP: "The numeric ID of the Facebook page (Page → About → Page ID)."
+  ACCESS_TOKEN_LABEL: "Page access token"
+  ACCESS_TOKEN_HELP: "Long-lived page token from the Meta app (Graph API Explorer → Page Token). It is only sent to graph.facebook.com. For Instagram it also needs instagram_basic and instagram_content_publish."
+  API_VERSION_LABEL: "API version"
+  IG_SECTION_TITLE: "Instagram"
+  IG_USER_ID_LABEL: "Instagram account ID (optional)"
+  IG_USER_ID_HELP: "Leave empty: the plugin reads the ID of the connected account through the Facebook page. Fill it in only when the test cannot find the account."
+  PAGES_SECTION_TITLE: "Which pages"
+  ROUTES_LABEL: "Parent pages (routes)"
+  ROUTES_HELP: "The children of these pages can be shared. Separate several with commas, for example /news, /events"
+  TEMPLATES_LABEL: "Page types"
+  TEMPLATES_HELP: "Only pages of these templates get the «Share» tab. Separate several with commas, for example item, event"
+  BEHAVIOR_SECTION_TITLE: "Behaviour"
+  AUTO_SHARE_LABEL: "Share automatically"
+  AUTO_SHARE_HELP: "Checks continuously (throttled) whether released pages are due, and posts them. Alternatively by CLI or cron only: bin/plugin cw-social share --force"
+  THROTTLE_MINUTES_LABEL: "Check interval (minutes)"
+  SITE_URL_LABEL: "Public site URL"
+  SITE_URL_HELP: "The basis for the posted links and for the Instagram image, for example https://example.com — IMPORTANT: never localhost, never a test domain."
+  SITE_URL_PLACEHOLDER: "https://example.com"
+  MESSAGE_TEMPLATE_LABEL: "Text template"
+  MESSAGE_TEMPLATE_HELP: "Placeholders: {title}, {summary}, {url}, {datum}. Can be overridden per page. On Instagram the plugin appends the link as text."
+  ENABLED: "Enabled"
+  DISABLED: "Disabled"
+  YES_OPTION: "Yes"
+  NO_OPTION: "No"
+  HINWEIS_FB_OFFEN: "No Facebook page connected yet (Plugins → CHWEB Social). The preview is accurate, but nothing is being shared."
+  HINWEIS_IG_BILD: "Instagram needs an image on the page (cover image or first image)."
+  HINWEIS_ERNEUT: "\"Share again\" is set to Yes: after saving, the post goes out again on the channels that are switched on."
+  HINWEIS_ENTWURF: "This page is a draft: it is shared once the draft flag is removed."
