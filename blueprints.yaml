@@ -1,7 +1,7 @@
 name: 'CHWEB Social'
 slug: cw-social
 type: plugin
-version: 1.6.0
+version: 1.6.1
 description: 'Shares pages automatically on Facebook (link post) and Instagram (cover image with text) through the Meta Graph API. The configuration decides which pages qualify; it posts through Grav scheduler jobs; the state is kept in the page and in a journal, so nothing goes out twice.'
 icon: share-nodes
 author:

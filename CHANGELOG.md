@@ -1,3 +1,9 @@
+# v1.6.1
+## 2026-11-19
+
+1. [](#bugfix)
+    * Packaging only: two empty Grav CLI cache files had found their way into the 1.6.0 package. Nothing in the plugin itself changed, and 1.6.0 was never released.
+
 # v1.6.0
 ## 2026-11-19
 
