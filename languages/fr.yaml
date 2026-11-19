@@ -1,7 +1,7 @@
 PLUGIN_CW_SOCIAL:
   TAB: 'Partager'
   SECTION: 'Réseaux sociaux (CHWEB Social)'
-  HINT: 'Choisissez si cette page apparaît sur Facebook et Instagram après l’enregistrement. Cela se fait automatiquement en quelques minutes, dès que la page est publiée et que sa date est atteinte. L’aperçu ci-dessous montre la publication à l’avance.'
+  HINT: 'Choisissez si cette page apparaît sur Facebook et Instagram après l’enregistrement. Cela se fait tout seul lors de la prochaine exécution, dès que la page est publiée et que sa date est atteinte. L’aperçu ci-dessous montre la publication à l’avance.'
   SHARE_LABEL: 'Partager sur Facebook'
   SHARE_HELP: 'Oui : après l’enregistrement, une publication avec lien apparaît sur la page Facebook. Facebook reprend l’image et le titre de cette page.'
   INSTAGRAM_LABEL: 'Partager sur Instagram'
@@ -27,15 +27,27 @@ PLUGIN_CW_SOCIAL:
   ROUTES_HELP: "Les enfants de ces pages peuvent être partagés. Séparez-en plusieurs par des virgules, par exemple /news, /events"
   TEMPLATES_LABEL: "Types de page"
   TEMPLATES_HELP: "Seules les pages de ces gabarits reçoivent l'onglet «Partager». Séparez-en plusieurs par des virgules, par exemple item, event"
-  BEHAVIOR_SECTION_TITLE: "Comportement"
-  AUTO_SHARE_LABEL: "Partager automatiquement"
-  AUTO_SHARE_HELP: "Vérifie en continu (de manière limitée) si des pages publiées sont dues, puis les publie. Sinon uniquement via CLI ou cron: bin/plugin cw-social share --force"
-  THROTTLE_MINUTES_LABEL: "Intervalle de vérification (minutes)"
+  URL_SECTION_TITLE: "Adresse publique (obligatoire)"
   SITE_URL_LABEL: "URL publique du site"
-  SITE_URL_HELP: "La base des liens publiés et de l'image Instagram, par exemple https://example.com — IMPORTANT: jamais localhost, jamais un domaine de test."
+  SITE_URL_HELP: "La base des liens publiés et de l'image Instagram, par exemple https://example.com — jamais localhost, jamais un domaine de test. Sans elle, rien n'est publié: il n'y a volontairement aucun repli sur l'hôte appelé, sinon une copie du site sur un domaine de test publierait des liens vers ce domaine."
   SITE_URL_PLACEHOLDER: "https://example.com"
+  BEHAVIOR_SECTION_TITLE: "Quand la publication a lieu"
+  SCHEDULER_LABEL: "Publier via le planificateur"
+  SCHEDULER_HELP: "La voie prévue. La tâche s'exécute en dehors des requêtes de page et peut attendre Instagram. Elle s'active et se désactive aussi sous Outils → Planificateur, où l'entrée cron de Grav doit être en place."
+  SCHEDULER_AT_LABEL: "Rythme (cron)"
+  SCHEDULER_AT_HELP: "Syntaxe cron, par défaut */15 * * * * (toutes les 15 minutes)."
+  AUTO_SHARE_LABEL: "Sans planificateur: publier pendant une requête"
+  AUTO_SHARE_HELP: "Uniquement pour les installations sans cron. Vérifie — de manière limitée et sous verrou — si quelque chose est dû, et le publie pendant qu'un visiteur attend la page. Cela ralentit cette requête et ne permet pas d'attendre longtemps Instagram; c'est donc désactivé par défaut."
+  THROTTLE_MINUTES_LABEL: "Intervalle de vérification (minutes)"
+  THROTTLE_MINUTES_HELP: "Ne concerne que la voie sans planificateur."
+  MAX_ATTEMPTS_LABEL: "Tentatives par page et par canal"
+  MAX_ATTEMPTS_HELP: "Ensuite, ce canal n'est plus tenté pour cette page; la raison figure dans le journal du site. Sans ce frein, une image qu'Instagram n'acceptera jamais retombe dans l'attente à chaque exécution."
+  TEXT_SECTION_TITLE: "Texte de la publication"
   MESSAGE_TEMPLATE_LABEL: "Modèle de texte"
   MESSAGE_TEMPLATE_HELP: "Jetons: {title}, {summary}, {url}, {datum}. Peuvent être remplacés page par page. Sur Instagram, l'extension ajoute le lien sous forme de texte."
+  DATE_FORMAT_LABEL: "Format de date pour {datum}"
+  DATE_FORMAT_HELP: "Syntaxe de la fonction date() de PHP. Vide: ce que le site a réglé pour les dates courtes (Système → Pages)."
+  DATE_FORMAT_PLACEHOLDER: "d/m/Y"
   ENABLED: "Activé"
   DISABLED: "Désactivé"
   YES_OPTION: "Oui"
@@ -44,3 +56,4 @@ PLUGIN_CW_SOCIAL:
   HINWEIS_IG_BILD: "Instagram a besoin d’une image sur la page (image de couverture ou première image)."
   HINWEIS_ERNEUT: "« Partager à nouveau » est sur Oui : après l’enregistrement, la publication repart sur les canaux activés."
   HINWEIS_ENTWURF: "Cette page est un brouillon : elle sera publiée une fois le brouillon levé."
+  HINWEIS_SITE_URL: "L'URL publique du site est manquante (Extensions → CHWEB Social). Tant qu'elle manque, rien n'est publié — une publication renvoyant vers un domaine de test serait pire que pas de publication."

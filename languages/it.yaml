@@ -1,7 +1,7 @@
 PLUGIN_CW_SOCIAL:
   TAB: 'Condividi'
   SECTION: 'Social media (CHWEB Social)'
-  HINT: 'Scegli se questa pagina compare su Facebook e Instagram dopo il salvataggio. Avviene automaticamente entro pochi minuti, non appena la pagina è pubblicata e la sua data è raggiunta. L’anteprima qui sotto mostra il post in anticipo.'
+  HINT: 'Scegli se questa pagina compare su Facebook e Instagram dopo il salvataggio. Avviene da sé alla prossima esecuzione, non appena la pagina è pubblicata e la sua data è raggiunta. L’anteprima qui sotto mostra il post in anticipo.'
   SHARE_LABEL: 'Condividi su Facebook'
   SHARE_HELP: 'Sì: dopo il salvataggio compare un post con link sulla pagina Facebook. Facebook prende immagine e titolo da questa pagina.'
   INSTAGRAM_LABEL: 'Condividi su Instagram'
@@ -27,15 +27,27 @@ PLUGIN_CW_SOCIAL:
   ROUTES_HELP: "I figli di queste pagine possono essere condivisi. Separare più voci con virgole, per esempio /news, /events"
   TEMPLATES_LABEL: "Tipi di pagina"
   TEMPLATES_HELP: "Solo le pagine di questi modelli ricevono la scheda «Condividi». Separare più voci con virgole, per esempio item, event"
-  BEHAVIOR_SECTION_TITLE: "Comportamento"
-  AUTO_SHARE_LABEL: "Condividere automaticamente"
-  AUTO_SHARE_HELP: "Verifica di continuo (in modo limitato) se le pagine pubblicate sono da condividere e le pubblica. In alternativa solo via CLI o cron: bin/plugin cw-social share --force"
-  THROTTLE_MINUTES_LABEL: "Intervallo di verifica (minuti)"
+  URL_SECTION_TITLE: "Indirizzo pubblico (obbligatorio)"
   SITE_URL_LABEL: "URL pubblico del sito"
-  SITE_URL_HELP: "La base per i link pubblicati e per l'immagine di Instagram, per esempio https://example.com — IMPORTANTE: mai localhost, mai un dominio di prova."
+  SITE_URL_HELP: "La base per i link pubblicati e per l'immagine di Instagram, per esempio https://example.com — mai localhost, mai un dominio di prova. Senza di esso non viene pubblicato nulla: non esiste volutamente un ripiego sull'host chiamato, altrimenti una copia del sito su un dominio di prova pubblicherebbe link a quel dominio."
   SITE_URL_PLACEHOLDER: "https://example.com"
+  BEHAVIOR_SECTION_TITLE: "Quando viene pubblicato"
+  SCHEDULER_LABEL: "Pubblicare tramite lo scheduler"
+  SCHEDULER_HELP: "La via prevista. Il processo gira al di fuori delle richieste di pagina e può attendere Instagram. Si attiva e disattiva anche in Strumenti → Scheduler, dove deve essere presente la voce cron di Grav."
+  SCHEDULER_AT_LABEL: "Cadenza (cron)"
+  SCHEDULER_AT_HELP: "Sintassi cron, predefinito */15 * * * * (ogni 15 minuti)."
+  AUTO_SHARE_LABEL: "Senza scheduler: pubblicare durante una richiesta"
+  AUTO_SHARE_HELP: "Solo per installazioni senza cron. Verifica — in modo limitato e con un blocco — se c'è qualcosa da pubblicare e lo pubblica mentre un visitatore attende la pagina. Questo rallenta la richiesta e non consente di attendere a lungo Instagram, perciò è disattivato di serie."
+  THROTTLE_MINUTES_LABEL: "Intervallo di verifica (minuti)"
+  THROTTLE_MINUTES_HELP: "Riguarda solo la via senza scheduler."
+  MAX_ATTEMPTS_LABEL: "Tentativi per pagina e canale"
+  MAX_ATTEMPTS_HELP: "Dopodiché questo canale non viene più tentato per questa pagina; il motivo è nel registro del sito. Senza questo freno, un'immagine che Instagram non accetterà mai ricade nell'attesa a ogni esecuzione."
+  TEXT_SECTION_TITLE: "Testo del post"
   MESSAGE_TEMPLATE_LABEL: "Modello di testo"
   MESSAGE_TEMPLATE_HELP: "Segnaposto: {title}, {summary}, {url}, {datum}. Si possono sovrascrivere per singola pagina. Su Instagram il plugin aggiunge il link come testo."
+  DATE_FORMAT_LABEL: "Formato data per {datum}"
+  DATE_FORMAT_HELP: "Sintassi della funzione date() di PHP. Vuoto: quanto impostato dal sito per le date brevi (Sistema → Pagine)."
+  DATE_FORMAT_PLACEHOLDER: "d/m/Y"
   ENABLED: "Attivato"
   DISABLED: "Disattivato"
   YES_OPTION: "Sì"
@@ -44,3 +56,4 @@ PLUGIN_CW_SOCIAL:
   HINWEIS_IG_BILD: "Instagram ha bisogno di un’immagine sulla pagina (immagine di copertina o prima immagine)."
   HINWEIS_ERNEUT: "«Condividi di nuovo» è su Sì: dopo il salvataggio il post esce di nuovo sui canali attivi."
   HINWEIS_ENTWURF: "Questa pagina è una bozza: viene condivisa quando la bozza viene tolta."
+  HINWEIS_SITE_URL: "Manca l'URL pubblico del sito (Plugin → CHWEB Social). Finché manca non viene pubblicato nulla — un post con un link a un dominio di prova sarebbe peggio di nessun post."

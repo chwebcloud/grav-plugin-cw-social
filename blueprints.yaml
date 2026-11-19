@@ -1,8 +1,8 @@
 name: 'CHWEB Social'
 slug: cw-social
 type: plugin
-version: 1.5.0
-description: 'Shares pages automatically on Facebook (link post) and Instagram (cover image with text) through the Meta Graph API. The configuration decides which pages qualify; the state is kept in the page itself, so nothing goes out twice.'
+version: 1.6.0
+description: 'Shares pages automatically on Facebook (link post) and Instagram (cover image with text) through the Meta Graph API. The configuration decides which pages qualify; it posts through Grav scheduler jobs; the state is kept in the page and in a journal, so nothing goes out twice.'
 icon: share-nodes
 author:
   name: 'CHWEB GmbH'
@@ -100,34 +100,75 @@ form:
       default: 'item'
       size: medium
 
-    behavior_section:
+    url_section:
       type: section
-      title: PLUGIN_CW_SOCIAL.BEHAVIOR_SECTION_TITLE
+      title: PLUGIN_CW_SOCIAL.URL_SECTION_TITLE
       underline: true
 
-    auto_share:
-      type: toggle
-      label: PLUGIN_CW_SOCIAL.AUTO_SHARE_LABEL
-      help: PLUGIN_CW_SOCIAL.AUTO_SHARE_HELP
-      highlight: 1
-      default: 1
-      options: { 1: PLUGIN_CW_SOCIAL.YES_OPTION, 0: PLUGIN_CW_SOCIAL.NO_OPTION }
-      validate: { type: bool }
-    throttle_minutes:
-      type: number
-      label: PLUGIN_CW_SOCIAL.THROTTLE_MINUTES_LABEL
-      default: 5
-      size: x-small
-      validate: { type: int, min: 1 }
     site_url:
       type: text
       label: PLUGIN_CW_SOCIAL.SITE_URL_LABEL
       help: PLUGIN_CW_SOCIAL.SITE_URL_HELP
       placeholder: PLUGIN_CW_SOCIAL.SITE_URL_PLACEHOLDER
-      size: medium
+      size: large
+
+    behavior_section:
+      type: section
+      title: PLUGIN_CW_SOCIAL.BEHAVIOR_SECTION_TITLE
+      underline: true
+
+    scheduler:
+      type: toggle
+      label: PLUGIN_CW_SOCIAL.SCHEDULER_LABEL
+      help: PLUGIN_CW_SOCIAL.SCHEDULER_HELP
+      highlight: 1
+      default: 1
+      options: { 1: PLUGIN_CW_SOCIAL.YES_OPTION, 0: PLUGIN_CW_SOCIAL.NO_OPTION }
+      validate: { type: bool }
+    scheduler_at:
+      type: text
+      label: PLUGIN_CW_SOCIAL.SCHEDULER_AT_LABEL
+      help: PLUGIN_CW_SOCIAL.SCHEDULER_AT_HELP
+      default: '*/15 * * * *'
+      size: small
+
+    auto_share:
+      type: toggle
+      label: PLUGIN_CW_SOCIAL.AUTO_SHARE_LABEL
+      help: PLUGIN_CW_SOCIAL.AUTO_SHARE_HELP
+      highlight: 0
+      default: 0
+      options: { 1: PLUGIN_CW_SOCIAL.YES_OPTION, 0: PLUGIN_CW_SOCIAL.NO_OPTION }
+      validate: { type: bool }
+    throttle_minutes:
+      type: number
+      label: PLUGIN_CW_SOCIAL.THROTTLE_MINUTES_LABEL
+      help: PLUGIN_CW_SOCIAL.THROTTLE_MINUTES_HELP
+      default: 5
+      size: x-small
+      validate: { type: int, min: 1 }
+    max_attempts:
+      type: number
+      label: PLUGIN_CW_SOCIAL.MAX_ATTEMPTS_LABEL
+      help: PLUGIN_CW_SOCIAL.MAX_ATTEMPTS_HELP
+      default: 3
+      size: x-small
+      validate: { type: int, min: 1 }
+
+    text_section:
+      type: section
+      title: PLUGIN_CW_SOCIAL.TEXT_SECTION_TITLE
+      underline: true
+
     message_template:
       type: textarea
       label: PLUGIN_CW_SOCIAL.MESSAGE_TEMPLATE_LABEL
       help: PLUGIN_CW_SOCIAL.MESSAGE_TEMPLATE_HELP
       rows: 3
       default: "{title}\n\n{summary}"
+    date_format:
+      type: text
+      label: PLUGIN_CW_SOCIAL.DATE_FORMAT_LABEL
+      help: PLUGIN_CW_SOCIAL.DATE_FORMAT_HELP
+      placeholder: PLUGIN_CW_SOCIAL.DATE_FORMAT_PLACEHOLDER
+      size: small

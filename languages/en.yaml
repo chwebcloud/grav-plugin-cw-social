@@ -1,7 +1,7 @@
 PLUGIN_CW_SOCIAL:
   TAB: 'Share'
   SECTION: 'Social media (CHWEB Social)'
-  HINT: 'Choose whether this page appears on Facebook and Instagram after saving. It happens automatically within a few minutes – once the page is published and its date has arrived. The preview below shows the post beforehand.'
+  HINT: 'Choose whether this page appears on Facebook and Instagram after saving. It happens by itself on the next run – once the page is published and its date has arrived. The preview below shows the post beforehand.'
   SHARE_LABEL: 'Share on Facebook'
   SHARE_HELP: 'Yes: After saving, a link post appears on the Facebook page. Facebook takes image and title from this page.'
   INSTAGRAM_LABEL: 'Share on Instagram'
@@ -27,15 +27,27 @@ PLUGIN_CW_SOCIAL:
   ROUTES_HELP: "The children of these pages can be shared. Separate several with commas, for example /news, /events"
   TEMPLATES_LABEL: "Page types"
   TEMPLATES_HELP: "Only pages of these templates get the «Share» tab. Separate several with commas, for example item, event"
-  BEHAVIOR_SECTION_TITLE: "Behaviour"
-  AUTO_SHARE_LABEL: "Share automatically"
-  AUTO_SHARE_HELP: "Checks continuously (throttled) whether released pages are due, and posts them. Alternatively by CLI or cron only: bin/plugin cw-social share --force"
-  THROTTLE_MINUTES_LABEL: "Check interval (minutes)"
+  URL_SECTION_TITLE: "Public address (required)"
   SITE_URL_LABEL: "Public site URL"
-  SITE_URL_HELP: "The basis for the posted links and for the Instagram image, for example https://example.com — IMPORTANT: never localhost, never a test domain."
+  SITE_URL_HELP: "The basis for the posted links and for the Instagram image, for example https://example.com — never localhost, never a test domain. Nothing is posted without it: there is deliberately no fallback to whatever host was called, because a copy of the site on a test domain would otherwise publish posts linking to that test domain."
   SITE_URL_PLACEHOLDER: "https://example.com"
+  BEHAVIOR_SECTION_TITLE: "When it posts"
+  SCHEDULER_LABEL: "Post through the scheduler"
+  SCHEDULER_HELP: "The intended way. The job runs outside page requests and is allowed to wait for Instagram. It can also be switched on and off under Tools → Scheduler, where Grav's own cron entry needs to be in place."
+  SCHEDULER_AT_LABEL: "Interval (cron)"
+  SCHEDULER_AT_HELP: "Cron syntax, default */15 * * * * (every 15 minutes)."
+  AUTO_SHARE_LABEL: "Without a scheduler: post during a page request"
+  AUTO_SHARE_HELP: "For installations without cron only. Checks — throttled and under a lock — whether anything is due, and posts it while a visitor is waiting for the page. That makes this request slower and cannot wait long for Instagram, so it is off by default."
+  THROTTLE_MINUTES_LABEL: "Check interval (minutes)"
+  THROTTLE_MINUTES_HELP: "Applies to the way without a scheduler only."
+  MAX_ATTEMPTS_LABEL: "Attempts per page and channel"
+  MAX_ATTEMPTS_HELP: "After that, this channel is no longer tried for this page; the reason is in the site's log. Without this brake, an image Instagram will never accept runs into the waiting time on every single run."
+  TEXT_SECTION_TITLE: "Text of the post"
   MESSAGE_TEMPLATE_LABEL: "Text template"
   MESSAGE_TEMPLATE_HELP: "Placeholders: {title}, {summary}, {url}, {datum}. Can be overridden per page. On Instagram the plugin appends the link as text."
+  DATE_FORMAT_LABEL: "Date format for {datum}"
+  DATE_FORMAT_HELP: "Syntax of PHP's date() function. Empty: whatever the site has set for short dates (System → Pages)."
+  DATE_FORMAT_PLACEHOLDER: "d M Y"
   ENABLED: "Enabled"
   DISABLED: "Disabled"
   YES_OPTION: "Yes"
@@ -44,3 +56,4 @@ PLUGIN_CW_SOCIAL:
   HINWEIS_IG_BILD: "Instagram needs an image on the page (cover image or first image)."
   HINWEIS_ERNEUT: "\"Share again\" is set to Yes: after saving, the post goes out again on the channels that are switched on."
   HINWEIS_ENTWURF: "This page is a draft: it is shared once the draft flag is removed."
+  HINWEIS_SITE_URL: "The public site URL is missing (Plugins → CHWEB Social). Nothing is posted while it is missing — a post linking to a test domain would be worse than no post."

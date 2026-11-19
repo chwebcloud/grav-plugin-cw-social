@@ -20,6 +20,7 @@ use Symfony\Component\Console\Input\InputOption;
 require_once __DIR__ . '/../classes/GraphApi.php';
 require_once __DIR__ . '/../classes/FacebookPublisher.php';
 require_once __DIR__ . '/../classes/InstagramPublisher.php';
+require_once __DIR__ . '/../classes/Protokoll.php';
 require_once __DIR__ . '/../classes/ShareWorker.php';
 
 class ShareCommand extends ConsoleCommand
@@ -40,15 +41,22 @@ class ShareCommand extends ConsoleCommand
         $grav['uri']->init();
         $grav['pages']->init();
 
-        $cfg = (array) $grav['config']->get('plugins.cw-social');
-        if (empty($cfg['page_id']) || empty($cfg['access_token'])) {
-            $this->output->writeln('<error>page_id or access_token missing (Admin -> Plugins -> CHWEB Social).</error>');
-            return 1;
-        }
-
+        $cfg    = (array) $grav['config']->get('plugins.cw-social');
         $worker = new ShareWorker($grav, $cfg);
         $force  = (bool) $this->input->getOption('force');
         $route  = $this->input->getArgument('route');
+
+        // Was dem Teilen im Weg steht, sagt der Worker -- derselbe Satz, den
+        // er ins Protokoll schreibt. Ein Trockenlauf darf trotzdem zeigen, was
+        // geteilt wuerde.
+        $hindernis = $worker->hindernis();
+        if ($force && $hindernis !== '') {
+            $this->output->writeln('<error>Not posting: ' . $hindernis . '</error>');
+            return 1;
+        }
+        if ($hindernis !== '') {
+            $this->output->writeln('<comment>Note: ' . $hindernis . '</comment>');
+        }
 
         if ($route) {
             $page = $grav['pages']->find($route);

@@ -49,9 +49,11 @@ class CwSocialPlugin extends Plugin
         return [
             'onPluginsInitialized' => ['onPluginsInitialized', 0],
             'onBlueprintCreated'   => ['onBlueprintCreated', 0],
-            // Grav 2.0 (api-Plugin): Vorschau-Endpunkt und Kern der Admin-Komponente.
-            // Feuert nur dort; auf Grav 1.7 ein toter Listener. Nicht hinter
-            // isAdmin() -- die API laeuft im Frontend-Lifecycle.
+            // Der vorgesehene Weg zum Posten: Gravs Zeitplaner.
+            'onSchedulerInitialized' => ['onSchedulerInitialized', 0],
+            // Grav 2.0 (api-Plugin): Vorschau-Endpunkt. Feuert nur dort; auf
+            // Grav 1.7 ein toter Listener. Nicht hinter isAdmin() -- die API
+            // laeuft im Frontend-Lifecycle.
             'onApiRegisterRoutes'  => ['onApiRegisterRoutes', 0],
         ];
     }
@@ -161,44 +163,92 @@ class CwSocialPlugin extends Plugin
     public function onApiRegisterRoutes(Event $event): void
     {
         require_once __DIR__ . '/classes/ApiController.php';
-        $ctrl = CwSocial\ApiController::class;
-        $event['routes']->get('/cw-social/kern/{name}', [$ctrl, 'kern']);
-        $event['routes']->post('/cw-social/vorschau', [$ctrl, 'vorschau']);
+        $event['routes']->post('/cw-social/vorschau', [CwSocial\ApiController::class, 'vorschau']);
     }
 
     /**
-     * Gedrosselter Auto-Share-Lauf: hoechstens alle N Minuten wird geprueft,
-     * ob etwas faellig ist -- die einzelne Seitenanfrage bleibt schnell.
+     * Der vorgesehene Weg zum Posten: ein Auftrag im Zeitplaner von Grav.
+     *
+     * Er laeuft ausserhalb jeder Seitenanfrage, einmal und nicht einmal je
+     * Besucher, und er kann warten -- Instagram braucht nach dem Anlegen des
+     * Medien-Containers ein paar Sekunden. Der laufzeit-getriebene Worker
+     * (`auto_share`) ist seit 1.6.0 der Ausnahmeweg fuer Installationen ohne
+     * Cron und ab Werk aus (getgrav/grav#4401, Punkt 1).
+     *
+     * Ein-, ausschalten und den Takt aendern: Admin -> Werkzeuge -> Zeitplaner.
+     */
+    public function onSchedulerInitialized(Event $event): void
+    {
+        $cfg = (array) $this->config->get('plugins.cw-social');
+        if (empty($cfg['enabled']) || empty($cfg['scheduler'])) {
+            return;
+        }
+        $takt = trim((string) ($cfg['scheduler_at'] ?? '')) ?: '*/15 * * * *';
+        $job  = $event['scheduler']->addCommand('bin/plugin cw-social share --force', [], 'cw-social-share');
+        $job->at($takt);
+        $job->backlink('/plugins/cw-social');
+    }
+
+    /**
+     * Ausnahmeweg fuer Installationen ohne Cron: gedrosselter Lauf in einer
+     * Seitenanfrage, ab Werk AUS.
+     *
+     * Drei Dinge, die bis 1.5.1 fehlten und ohne die das nicht zu haben ist:
+     * eine Sperre (zwei gleichzeitige Anfragen liefen beide los, weil Pruefen
+     * und Setzen der Zeitmarke nicht zusammenhingen), der Verzicht bei
+     * fehlender `site_url`, und der Rueckzug nach Fehlversuchen -- der steckt
+     * im ShareWorker samt Protokoll.
      */
     public function onPagesInitialized(): void
     {
         $cfg = (array) $this->config->get('plugins.cw-social');
         if (empty($cfg['enabled']) || empty($cfg['auto_share'])
-            || empty($cfg['page_id']) || empty($cfg['access_token'])) {
+            || empty($cfg['page_id']) || empty($cfg['access_token'])
+            || trim((string) ($cfg['site_url'] ?? '')) === '') {
             return;
         }
 
-        $locator  = $this->grav['locator'];
-        $stampDir = $locator->findResource('cache://', true, true) . '/cw-social';
-        $stamp    = $stampDir . '/last-run';
-        $throttle = max(1, (int) ($cfg['throttle_minutes'] ?? 5)) * 60;
-
-        if (is_file($stamp) && (time() - (int) @filemtime($stamp)) < $throttle) {
+        $ordner = (string) $this->grav['locator']->findResource('cache://', true, true) . '/cw-social';
+        if (!is_dir($ordner) && !@mkdir($ordner, 0775, true) && !is_dir($ordner)) {
             return;
         }
-        @mkdir($stampDir, 0775, true);
-        @touch($stamp);
+        $marke = $ordner . '/last-run';
+        $takt  = max(1, (int) ($cfg['throttle_minutes'] ?? 5)) * 60;
 
-        require_once __DIR__ . '/classes/GraphApi.php';
-        require_once __DIR__ . '/classes/FacebookPublisher.php';
-        require_once __DIR__ . '/classes/InstagramPublisher.php';
-        require_once __DIR__ . '/classes/ShareWorker.php';
+        // Vorpruefung ohne Sperre, damit die weit ueberwiegende Anfrage nicht
+        // einmal eine Datei oeffnen muss.
+        if (is_file($marke) && (time() - (int) @filemtime($marke)) < $takt) {
+            return;
+        }
 
+        // Sperre: Nur eine Anfrage laeuft. Pruefen und Setzen der Zeitmarke
+        // liegen darin, sonst kommen zwei gleichzeitige Anfragen beide durch
+        // und posten dieselbe Seite zweimal.
+        $sperre = @fopen($ordner . '/.lock', 'c');
+        if (!$sperre) {
+            return;
+        }
         try {
-            $worker = new CwSocial\ShareWorker($this->grav, $cfg);
-            $worker->run();
+            if (!flock($sperre, LOCK_EX | LOCK_NB)) {
+                return;   // es laeuft schon einer
+            }
+            if (is_file($marke) && (time() - (int) @filemtime($marke)) < $takt) {
+                return;
+            }
+            @touch($marke);
+
+            require_once __DIR__ . '/classes/GraphApi.php';
+            require_once __DIR__ . '/classes/FacebookPublisher.php';
+            require_once __DIR__ . '/classes/InstagramPublisher.php';
+            require_once __DIR__ . '/classes/Protokoll.php';
+            require_once __DIR__ . '/classes/ShareWorker.php';
+
+            (new CwSocial\ShareWorker($this->grav, $cfg))->run();
         } catch (\Throwable $e) {
             $this->grav['log']->error('cw-social: ' . $e->getMessage());
+        } finally {
+            @flock($sperre, LOCK_UN);
+            @fclose($sperre);
         }
     }
 }

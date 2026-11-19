@@ -1,3 +1,32 @@
+# v1.6.0
+## 2026-11-19
+
+Everything the directory review asked for ([getgrav/grav#4401](https://github.com/getgrav/grav/issues/4401)). The six points, in its order:
+
+1. [](#bugfix)
+    * **1. No more duplicate posts, and no endless retries.** The post went out first and the post ID was written to the page file afterwards. Where `user/pages` is read-only — a Git-deployed site — that write fails, the page still counts as unshared, and the next run posts it again. Every five minutes, without end. Three changes: the attempt is **recorded before posting**, in a journal under `user/data/cw-social/protokoll.json` that is not part of a deployment; either the journal or the front matter is enough to make a page count as shared; and a page and channel is tried at most `max_attempts` times (3) before it is left alone with the reason in the log.
+    * **A lock, and the throttle inside it.** The runtime worker checked the time stamp and then touched it, with nothing in between — two simultaneous requests both came through and both posted. Checking and touching now happen under `flock`.
+    * **An image Instagram cannot accept is recognised before the container is created.** The aspect ratio (4:5 to 1.91:1) and the minimum width of 320 pixels are measured on the page's own image. The issue said this was handled; only the JPEG conversion was. Such a page no longer spends nine seconds of every run waiting for a refusal it already earned.
+    * **2. Nothing is posted without `site_url`.** The link used to fall back to the host that happened to be calling, so a copy of the site on a staging domain that carried the token published posts linking to the staging domain. There is no fallback any more: without `site_url` the run refuses, and says so in the log, on the command line and in the preview.
+    * **4. The preview endpoint requires `api.pages.read` and honours the page's access rules.** `api.access` was enough before, for any route — including unpublished and access-restricted pages, whose title, summary and cover image it returned.
+    * **5. Only `https://` links in the preview.** `ig_permalink` comes from the page front matter, which an editor can write, and it ends up in an `href`. A `javascript:` URL there ran as soon as an admin clicked "view post". Checked when it is stored and again when it is rendered.
+
+2. [](#improved)
+    * **3. The preview is one ordinary field file; no code is evaluated any more.** It used to be a shell that fetched its core from the API and ran it with `new Function` — so that an update took effect without reloading the admin. Admin 2.0 can run with a Content Security Policy that has no `unsafe-eval`, and there the preview did not load at all. The price of the fix: after updating the plugin, the admin needs one reload.
+    * **The scheduler is the way the plugin posts.** A job `cw-social-share` registers itself with Grav's scheduler (every 15 minutes by default, `Tools → Scheduler`). It runs outside page requests and may wait for Instagram. The runtime worker (`auto_share`) is the exception for installations without cron and is **off by default**.
+    * **6. The rest of the German is gone from the preview.** "geteilt", "noch nicht geteilt", "Beitrag ansehen", "nicht eingerichtet", "Gerade eben", "Gefällt mir", "Kommentieren", "Kein Bild auf der Seite" and the Instagram notice are in the language table in all four languages. The timestamps are sent as ISO and formatted by the browser in the admin's own language; the `d.m.Y, H:i` is gone.
+    * **`{datum}` follows the site, not one country.** The date in the post text was fixed to `d.m.Y`. It now uses the site's own short date format (`system.pages.dateformat.short`), or `date_format` if that is set.
+    * **The link is built from the page URL, not from the route.** The route is the path in the page tree, without the subfolder of an installation and without a language prefix — on a site under `/blog` or with `/de/` the posted link pointed nowhere.
+    * **The token travels in an `Authorization: Bearer` header** instead of the query string, where it would end up in logs, error messages and redirects.
+    * **`composer.json` says PHP 7.4**, which is what the code needs and what the Grav 1.7 claim implies. It said 8.1.
+    * The settings form is sorted into what it actually decides: the public address (required), when it posts, and the text of the post.
+
+# v1.5.1
+## 2026-11-15
+
+1. [](#bugfix)
+    * **German umlauts in the admin.** Eight German labels and help texts of the plugin settings were spelled with "ae", "oe", "ue" instead of umlauts ("Fuer", "zusaetzlich", "ueber", "koennen", "Prueft", "faellig", "Pruef-Intervall", "Oeffentliche", "haengt"). Only `languages/de.yaml` changed; log and command-line messages stay English.
+
 # v1.5.0
 ## 2026-11-11
 

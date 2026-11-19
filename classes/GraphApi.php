@@ -35,12 +35,11 @@ abstract class GraphApi
     /** @return array<string,mixed> */
     private function request(string $method, string $path, array $params): array
     {
-        $params['access_token'] = $this->accessToken;
         $url = 'https://graph.facebook.com/' . $this->apiVersion . $path;
 
         $ch = curl_init();
         if ($method === 'GET') {
-            curl_setopt($ch, CURLOPT_URL, $url . '?' . http_build_query($params));
+            curl_setopt($ch, CURLOPT_URL, $url . ($params ? '?' . http_build_query($params) : ''));
         } else {
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_POST, true);
@@ -51,6 +50,10 @@ abstract class GraphApi
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => 20,
             CURLOPT_USERAGENT      => 'CHWEB cw-social (+https://chweb.ch)',
+            // Der Token gehoert in die Kopfzeile, nicht in die Adresse: eine
+            // Adresse landet in Protokollen, Fehlermeldungen und Weiterleitungen
+            // (getgrav/grav#4401).
+            CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $this->accessToken],
         ]);
 
         $body = curl_exec($ch);
@@ -73,7 +76,7 @@ abstract class GraphApi
         }
         $json = json_decode((string) $body, true);
         if (!is_array($json)) {
-            return ['_error' => 'HTTP ' . $code . ': ungueltige Antwort'];
+            return ['_error' => 'HTTP ' . $code . ': invalid response'];
         }
         if (isset($json['error'])) {
             $e = $json['error'];

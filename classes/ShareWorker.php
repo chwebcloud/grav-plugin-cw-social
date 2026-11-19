@@ -22,11 +22,52 @@ class ShareWorker
 {
     private Grav $grav;
     private array $cfg;
+    private ?Protokoll $protokoll = null;
 
     public function __construct(Grav $grav, array $cfg)
     {
         $this->grav = $grav;
         $this->cfg  = $cfg;
+    }
+
+    /**
+     * Was dem Teilen im Weg steht -- als Satz, oder '' wenn nichts im Weg
+     * steht. Geprueft wird vor jedem Lauf, in jedem Weg (Worker, CLI,
+     * Zeitplaner).
+     *
+     * `site_url` ist Pflicht und hat keinen Rueckfall auf den gerade
+     * aufgerufenen Host: Eine Kopie der Website auf einer Testdomain, die den
+     * Token mitbringt, haette sonst Beitraege mit Links auf die Testdomain
+     * veroeffentlicht (getgrav/grav#4401, Punkt 2).
+     */
+    public function hindernis(): string
+    {
+        if (trim((string) ($this->cfg['site_url'] ?? '')) === '') {
+            return 'site_url is empty. Set the public address of this site (Admin -> Plugins -> CHWEB Social); '
+                 . 'without it the links in the posts would point at whatever host was called.';
+        }
+        if (empty($this->cfg['page_id']) || empty($this->cfg['access_token'])) {
+            return 'page_id or access_token missing (Admin -> Plugins -> CHWEB Social).';
+        }
+        if (!$this->protokoll()) {
+            return 'the journal under user/data/cw-social is not writable. Nothing is posted without it: '
+                 . 'it is what keeps a failed run from posting the same page again.';
+        }
+        return '';
+    }
+
+    /** Das Protokoll, oder null, wenn dort nicht geschrieben werden kann. */
+    private function protokoll(): ?Protokoll
+    {
+        if ($this->protokoll === null) {
+            $this->protokoll = Protokoll::fuer($this->grav);
+        }
+        return $this->protokoll;
+    }
+
+    private function maxVersuche(): int
+    {
+        return max(1, (int) ($this->cfg['max_attempts'] ?? 3));
     }
 
     /** Elternrouten aus der Konfiguration (`routes`, Rueckfall `news_route`). @return string[] */
@@ -61,6 +102,12 @@ class ShareWorker
     {
         $templates = self::templates($this->cfg);
         $results   = [];
+
+        $hindernis = $this->hindernis();
+        if (!$dryRun && $hindernis !== '') {
+            $this->grav['log']->error('cw-social: not posting -- ' . $hindernis);
+            return [['route' => '', 'ok' => false, 'detail' => 'not posting -- ' . $hindernis]];
+        }
 
         foreach (self::routes($this->cfg) as $route) {
             $eltern = $this->grav['pages']->find($route);
@@ -99,6 +146,12 @@ class ShareWorker
             return ['route' => $item->route(), 'ok' => false, 'detail' => 'nichts faellig: Teilen aus oder schon geteilt (Post-ID leeren fuer erneut)'];
         }
 
+        $hindernis = $this->hindernis();
+        if ($hindernis !== '') {
+            $this->grav['log']->error('cw-social: not posting -- ' . $hindernis);
+            return ['route' => $item->route(), 'ok' => false, 'detail' => 'not posting -- ' . $hindernis];
+        }
+
         $d       = $this->daten($item);
         $message = $d['text'];
         $link    = $d['link'];
@@ -106,41 +159,178 @@ class ShareWorker
         $ok      = true;
 
         if (in_array('facebook', $kanaele, true)) {
-            $fb  = new FacebookPublisher((string) $this->cfg['page_id'], (string) $this->cfg['access_token'], (string) ($this->cfg['api_version'] ?? 'v21.0'));
-            $res = $fb->publishLink($message, $link);
-            if ($res['ok']) {
-                $this->markPosted($item, ['fb_post_id' => $res['post_id'], 'fb_posted_at' => date('c'), 'erneut' => false]);
-                $this->grav['log']->info(sprintf('cw-social: "%s" auf Facebook geteilt (%s)', $item->title(), $res['post_id']));
-                $teile[] = 'Facebook ' . $res['post_id'];
-            } else {
+            $nr = $this->vorVersuch($item, 'facebook', $teile);
+            if ($nr === null) {
                 $ok = false;
-                $this->grav['log']->error(sprintf('cw-social: Facebook, "%s": %s', $item->title(), $res['error']));
-                $teile[] = 'Facebook ERROR ' . $res['error'];
+            } else {
+                $fb  = new FacebookPublisher((string) $this->cfg['page_id'], (string) $this->cfg['access_token'], (string) ($this->cfg['api_version'] ?? 'v21.0'));
+                $res = $fb->publishLink($message, $link);
+                if ($res['ok']) {
+                    $this->nachErfolg($item, 'facebook', (string) $res['post_id'], ['fb_post_id' => $res['post_id'], 'fb_posted_at' => date('c')]);
+                    $teile[] = 'Facebook ' . $res['post_id'];
+                } else {
+                    $ok = false;
+                    $this->nachFehler($item, 'facebook', (string) $res['error'], $nr);
+                    $teile[] = 'Facebook ERROR ' . $res['error'];
+                }
             }
         }
 
         if (in_array('instagram', $kanaele, true)) {
-            $bild = $d['bild'];
-            if ($bild === '') {
+            $grund = $d['bild'] === '' ? 'no image on the page (cover image or first image)' : $this->bildTauglich($item);
+            if ($grund !== '') {
+                // Daran aendert kein weiterer Lauf etwas: Die Versuche werden
+                // sofort aufgebraucht, damit die Seite nicht alle fuenf Minuten
+                // erneut neun Sekunden auf Instagram wartet.
                 $ok = false;
-                $this->grav['log']->error(sprintf('cw-social: Instagram, "%s": kein Bild auf der Seite', $item->title()));
-                $teile[] = 'Instagram ERROR no image on the page (cover image or first image)';
+                $this->aufgeben($item, 'instagram', $grund);
+                $teile[] = 'Instagram ERROR ' . $grund;
             } else {
-                $ig  = new InstagramPublisher((string) $this->cfg['page_id'], (string) $this->cfg['access_token'], (string) ($this->cfg['api_version'] ?? 'v21.0'), (string) ($this->cfg['ig_user_id'] ?? ''));
-                $res = $ig->publishImage($message . "\n\n" . $link, $bild);
-                if ($res['ok']) {
-                    $this->markPosted($item, ['ig_post_id' => $res['post_id'], 'ig_posted_at' => date('c'), 'ig_permalink' => (string) ($res['permalink'] ?? ''), 'erneut' => false]);
-                    $this->grav['log']->info(sprintf('cw-social: "%s" auf Instagram geteilt (%s)', $item->title(), $res['post_id']));
-                    $teile[] = 'Instagram ' . $res['post_id'];
-                } else {
+                $nr = $this->vorVersuch($item, 'instagram', $teile);
+                if ($nr === null) {
                     $ok = false;
-                    $this->grav['log']->error(sprintf('cw-social: Instagram, "%s": %s', $item->title(), $res['error']));
-                    $teile[] = 'Instagram ERROR ' . $res['error'];
+                } else {
+                    $ig  = new InstagramPublisher((string) $this->cfg['page_id'], (string) $this->cfg['access_token'], (string) ($this->cfg['api_version'] ?? 'v21.0'), (string) ($this->cfg['ig_user_id'] ?? ''));
+                    $res = $ig->publishImage($message . "\n\n" . $link, $d['bild']);
+                    if ($res['ok']) {
+                        $permalink = (string) ($res['permalink'] ?? '');
+                        $this->nachErfolg($item, 'instagram', (string) $res['post_id'], [
+                            'ig_post_id'   => $res['post_id'],
+                            'ig_posted_at' => date('c'),
+                            // Nur https:// -- der Wert landet im Admin in einem
+                            // href (getgrav/grav#4401, Punkt 5).
+                            'ig_permalink' => strncmp($permalink, 'https://', 8) === 0 ? $permalink : '',
+                        ]);
+                        $teile[] = 'Instagram ' . $res['post_id'];
+                    } else {
+                        $ok = false;
+                        $this->nachFehler($item, 'instagram', (string) $res['error'], $nr);
+                        $teile[] = 'Instagram ERROR ' . $res['error'];
+                    }
                 }
             }
         }
 
         return ['route' => $item->route(), 'ok' => $ok, 'detail' => implode(' | ', $teile)];
+    }
+
+    /**
+     * Den Versuch festhalten, BEVOR gepostet wird. Gibt die Nummer des
+     * Versuchs zurueck, oder null -- dann wird nicht gepostet, weil die
+     * Versuche aufgebraucht sind oder das Protokoll nicht schreibbar ist.
+     *
+     * @param string[] $teile
+     */
+    private function vorVersuch(PageInterface $item, string $kanal, array &$teile): ?int
+    {
+        $p = $this->protokoll();
+        $s = Protokoll::schluessel($item->path() ?: $item->route(), $kanal);
+        if (!$p) {
+            return null;
+        }
+        if ($p->aufgegeben($s, $this->maxVersuche())) {
+            $teile[] = ucfirst($kanal) . ' SKIPPED after ' . $this->maxVersuche()
+                     . ' failed attempts: ' . ($p->fehlerText($s) ?: 'see the log');
+            return null;
+        }
+        $nr = $p->versuch($s);
+        if ($nr === null) {
+            $this->grav['log']->error('cw-social: could not record the attempt, not posting ' . $item->route());
+            $teile[] = ucfirst($kanal) . ' ERROR the journal could not be written';
+        }
+        return $nr;
+    }
+
+    /**
+     * Erfolg: zuerst ins Protokoll, dann ins Frontmatter. Scheitert das
+     * Frontmatter -- schreibgeschuetztes user/pages --, steht der Beitrag
+     * trotzdem fest und wird nicht erneut gepostet; die fehlende Nummer in der
+     * Seite ist dann eine Meldung im Log, kein zweiter Beitrag.
+     */
+    private function nachErfolg(PageInterface $item, string $kanal, string $postId, array $werte): void
+    {
+        $p = $this->protokoll();
+        if ($p) {
+            $p->erfolg(Protokoll::schluessel($item->path() ?: $item->route(), $kanal), $postId);
+        }
+        $this->grav['log']->info(sprintf('cw-social: shared "%s" on %s (%s)', $item->title(), $kanal, $postId));
+        try {
+            $this->markPosted($item, $werte);
+        } catch (\Throwable $e) {
+            $this->grav['log']->error(sprintf(
+                'cw-social: shared "%s" on %s (%s), but the page file could not be updated: %s',
+                $item->title(), $kanal, $postId, $e->getMessage()
+            ));
+        }
+    }
+
+    private function nachFehler(PageInterface $item, string $kanal, string $fehler, int $nr): void
+    {
+        $p = $this->protokoll();
+        if ($p) {
+            $p->fehler(Protokoll::schluessel($item->path() ?: $item->route(), $kanal), $fehler);
+        }
+        $this->grav['log']->error(sprintf(
+            'cw-social: %s, "%s" (attempt %d of %d): %s',
+            $kanal, $item->title(), $nr, $this->maxVersuche(), $fehler
+        ));
+    }
+
+    /** Ein Fehler, den kein weiterer Lauf behebt: Versuche sofort aufbrauchen. */
+    private function aufgeben(PageInterface $item, string $kanal, string $grund): void
+    {
+        $p = $this->protokoll();
+        $s = Protokoll::schluessel($item->path() ?: $item->route(), $kanal);
+        if ($p && !$p->aufgegeben($s, $this->maxVersuche())) {
+            for ($i = 0; $i < $this->maxVersuche(); $i++) {
+                $p->versuch($s);
+            }
+            $p->fehler($s, $grund);
+            $this->grav['log']->error(sprintf('cw-social: %s, "%s": %s', $kanal, $item->title(), $grund));
+        }
+    }
+
+    /**
+     * Nimmt Instagram dieses Bild ueberhaupt an? Gibt den Grund zurueck,
+     * wenn nicht, sonst ''.
+     *
+     * Meta verlangt ein Seitenverhaeltnis zwischen 4:5 und 1.91:1 und
+     * mindestens 320 Pixel Breite. Bis 1.5.1 wurde das nur im README
+     * behauptet; gemessen wurde es nie, und ein Panorama lief in die Schleife
+     * «Container anlegen, neun Sekunden warten, abgewiesen» -- bei jedem Lauf
+     * (getgrav/grav#4401).
+     */
+    private function bildTauglich(PageInterface $item): string
+    {
+        $bild = $this->bildMedium($item);
+        if (!$bild instanceof ImageMedium) {
+            return '';   // ohne Medium nicht messbar; der Versuch entscheidet
+        }
+        return self::instagramGrund((int) $bild->get('width'), (int) $bild->get('height'));
+    }
+
+    /**
+     * Die Regel von Meta als reine Rechnung: Seitenverhaeltnis zwischen 4:5
+     * (0.8) und 1.91:1, mindestens 320 Pixel breit. Gibt den Grund zurueck,
+     * wenn das Bild durchfaellt, sonst ''. Unbekannte Masse sind kein Grund --
+     * dann entscheidet der Versuch.
+     */
+    public static function instagramGrund(int $breite, int $hoehe): string
+    {
+        if ($breite <= 0 || $hoehe <= 0) {
+            return '';
+        }
+        if ($breite < 320) {
+            return sprintf('Instagram needs at least 320 pixels of width, this image has %d.', $breite);
+        }
+        $v = $breite / $hoehe;
+        if ($v < 0.8 - 0.001 || $v > 1.91 + 0.001) {
+            return sprintf(
+                'Instagram only accepts aspect ratios between 4:5 (0.80) and 1.91:1, this image is %dx%d (%.2f).',
+                $breite, $hoehe, $v
+            );
+        }
+        return '';
     }
 
     /**
@@ -160,14 +350,37 @@ class ShareWorker
         }
         $social  = (array) ($item->header()->cw_social ?? []);
         // «Nochmals teilen»: die vorhandenen Beitrags-Nummern zaehlen nicht,
-        // der Beitrag geht auf den eingeschalteten Kanaelen erneut raus.
+        // der Beitrag geht auf den eingeschalteten Kanaelen erneut raus. Dann
+        // faengt auch das Protokoll fuer diese Seite von vorne an.
         $erneut  = !empty($social['erneut']);
+        $p       = $this->protokoll();
+        $pfad    = $item->path() ?: $item->route();
         $kanaele = [];
-        if (!empty($social['share']) && ($erneut || empty($social['fb_post_id']))) {
-            $kanaele[] = 'facebook';
-        }
-        if ($this->instagramAktiv() && !empty($social['instagram']) && ($erneut || empty($social['ig_post_id']))) {
-            $kanaele[] = 'instagram';
+
+        foreach (['facebook' => 'share', 'instagram' => 'instagram'] as $kanal => $schalter) {
+            if ($kanal === 'instagram' && !$this->instagramAktiv()) {
+                continue;
+            }
+            if (empty($social[$schalter])) {
+                continue;
+            }
+            $s = Protokoll::schluessel($pfad, $kanal);
+            if ($erneut) {
+                if ($p) {
+                    $p->zuruecksetzen($s);
+                }
+                $kanaele[] = $kanal;
+                continue;
+            }
+            // Zwei Gedaechtnisse, beide zaehlen: die Nummer im Frontmatter und
+            // die im Protokoll. Das Protokoll ist das, das auch bei
+            // schreibgeschuetztem user/pages gefuehrt werden kann -- ohne es
+            // postete der Worker dieselbe Seite endlos erneut.
+            $imKopf = !empty($social[$kanal === 'facebook' ? 'fb_post_id' : 'ig_post_id']);
+            if ($imKopf || ($p && $p->geteilt($s))) {
+                continue;
+            }
+            $kanaele[] = $kanal;
         }
         return $kanaele;
     }
@@ -259,7 +472,7 @@ class ShareWorker
             // Erstelldatum der Seite untergeschoben.
             return $this->datumText((string) ($h->datum ?? ''));
         }
-        return $item->date() ? date('d.m.Y', $item->date()) : '';
+        return $item->date() ? date($this->datumFormat(), $item->date()) : '';
     }
 
     private function datumText(string $roh): string
@@ -269,22 +482,60 @@ class ShareWorker
             return '';
         }
         $ts = strtotime($roh);
-        return $ts ? date('d.m.Y', $ts) : '';
+        return $ts ? date($this->datumFormat(), $ts) : '';
     }
 
-    /** Oeffentlicher Link: konfigurierte Site-URL (Prod!) + Route. */
+    /**
+     * Das Format fuer {datum} im Beitragstext. Ohne eigene Angabe gilt, was
+     * die Website fuer kurze Datumsangaben eingestellt hat
+     * (`system.pages.dateformat.short`) -- bis 1.5.1 stand hier fest `d.m.Y`,
+     * und das passt nur dort, wo man Daten so schreibt
+     * (getgrav/grav#4401, Punkt 6).
+     */
+    private function datumFormat(): string
+    {
+        $eigen = trim((string) ($this->cfg['date_format'] ?? ''));
+        if ($eigen !== '') {
+            return $eigen;
+        }
+        $grav = (string) $this->grav['config']->get('system.pages.dateformat.short', '');
+        return $grav !== '' ? $grav : 'd M Y';
+    }
+
+    /**
+     * Oeffentlicher Link: die konfigurierte Site-URL und der Pfad, den Grav
+     * selbst fuer diese Seite bildet.
+     *
+     * Nicht `route()`: Die Route ist der Pfad im Seitenbaum, ohne das
+     * Unterverzeichnis einer Installation und ohne das Sprachkuerzel. Auf
+     * einer Website unter /blog oder mit /de/ vor jeder Adresse zeigte der
+     * Beitrag damit ins Leere. `url()` liefert beides mit.
+     */
     private function buildLink(PageInterface $item): string
     {
-        return $this->basis() . $item->route();
+        $basis = $this->basis();
+        $pfad  = (string) $item->url(false, false, true);
+
+        // Traegt die Site-URL schon das Unterverzeichnis (https://example.com/blog),
+        // steht es im Pfad von Grav ein zweites Mal. Einmal genuegt.
+        $basisPfad = rtrim((string) parse_url($basis, PHP_URL_PATH), '/');
+        if ($basisPfad !== '' && strpos($pfad, $basisPfad . '/') === 0) {
+            $pfad = substr($pfad, strlen($basisPfad));
+        }
+
+        return rtrim($basis, '/') . '/' . ltrim($pfad, '/');
     }
 
+    /**
+     * Die oeffentliche Adresse der Website -- ausschliesslich aus der
+     * Konfiguration. KEIN Rueckfall auf den gerade aufgerufenen Host: Sonst
+     * postet eine Kopie der Website auf einer Testdomain Links auf die
+     * Testdomain (getgrav/grav#4401, Punkt 2). Fehlt sie, wird nicht gepostet;
+     * dafuer sorgt hindernis().
+     */
     private function basis(): string
     {
-        $base = rtrim((string) ($this->cfg['site_url'] ?? ''), '/');
-        if ($base === '') {
-            $base = rtrim((string) ($this->grav['config']->get('system.custom_base_url') ?: $this->grav['uri']->rootUrl(true)), '/');
-        }
-        return $base;
+        return rtrim(trim((string) ($this->cfg['site_url'] ?? '')), '/');
     }
 
     /**
@@ -294,13 +545,7 @@ class ShareWorker
      */
     private function bildUrl(PageInterface $item, ?string $nameUeber = null): string
     {
-        $media = $item->media();
-        $name  = trim($nameUeber ?? (string) ($item->header()->bild ?? ''));
-        $bild  = $name !== '' ? ($media[$name] ?? null) : null;
-        if (!$bild instanceof ImageMedium) {
-            $bilder = $media->images();
-            $bild   = $bilder ? reset($bilder) : null;
-        }
+        $bild = $this->bildMedium($item, $nameUeber);
         if (!$bild instanceof ImageMedium) {
             return '';
         }
@@ -315,12 +560,43 @@ class ShareWorker
         return $this->basis() . '/' . ltrim($url, '/');
     }
 
-    /** Post-IDs und Zeitstempel ins Frontmatter schreiben (atomar via MarkdownFile). */
+    /**
+     * Das Bild der Seite als Medium: Kopffeld `bild` (Titelbild), sonst das
+     * erste Bild. Dieselbe Wahl fuer die Adresse und fuer die Messung des
+     * Seitenverhaeltnisses -- sonst wird das eine geprueft und das andere
+     * gepostet.
+     */
+    private function bildMedium(PageInterface $item, ?string $nameUeber = null): ?ImageMedium
+    {
+        $media = $item->media();
+        $name  = trim($nameUeber ?? (string) ($item->header()->bild ?? ''));
+        $bild  = $name !== '' ? ($media[$name] ?? null) : null;
+        if (!$bild instanceof ImageMedium) {
+            $bilder = $media->images();
+            $bild   = $bilder ? reset($bilder) : null;
+        }
+        return $bild instanceof ImageMedium ? $bild : null;
+    }
+
+    /**
+     * Post-IDs und Zeitstempel ins Frontmatter schreiben (atomar via
+     * MarkdownFile). Schlaegt das fehl -- schreibgeschuetztes user/pages --,
+     * fliegt die Ausnahme zum Aufrufer; der Beitrag ist dann im Protokoll
+     * festgehalten und wird nicht erneut gepostet.
+     *
+     * Der Schalter «Nochmals teilen» wird dabei immer zurueckgenommen, auch
+     * wenn nur ein Kanal raus ist: Er gilt fuer die naechste Speicherung, und
+     * die hat stattgefunden.
+     */
     private function markPosted(PageInterface $item, array $werte): void
     {
-        $file   = MarkdownFile::instance($item->filePath());
+        $datei = (string) $item->filePath();
+        if ($datei === '' || !is_writable($datei)) {
+            throw new \RuntimeException(sprintf('"%s" is not writable', $datei ?: '(no file)'));
+        }
+        $file   = MarkdownFile::instance($datei);
         $header = (array) $file->header();
-        $header['cw_social'] = array_merge((array) ($header['cw_social'] ?? []), $werte);
+        $header['cw_social'] = array_merge((array) ($header['cw_social'] ?? []), $werte, ['erneut' => false]);
         $file->header($header);
         $file->save();
     }

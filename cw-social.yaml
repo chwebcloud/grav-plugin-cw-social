@@ -20,9 +20,33 @@ ig_user_id: ''
 routes: '/news'
 templates: 'item'
 
-# ── Verhalten ──────────────────────────────────────────────
-auto_share: true          # laufzeit-getriebener Worker (gedrosselt)
-throttle_minutes: 5       # hoechstens alle N Minuten pruefen
+# ── Oeffentliche Adresse: PFLICHT ──────────────────────────
+# Ohne sie wird nicht gepostet. Es gibt bewusst keinen Rueckfall auf den
+# gerade aufgerufenen Host: Eine Kopie der Website auf einer Testdomain, die
+# den Token mitbringt, haette sonst Beitraege mit Links auf die Testdomain
+# veroeffentlicht.
 site_url: ''              # z. B. https://example.com — NIE localhost
+
+# ── Wann gepostet wird ─────────────────────────────────────
+# Der vorgesehene Weg ist der Zeitplaner von Grav (Werkzeuge -> Zeitplaner).
+# Er laeuft ausserhalb der Seitenanfragen und darf auf Instagram warten.
+scheduler: true
+scheduler_at: '*/15 * * * *'
+
+# Ausnahmeweg fuer Installationen ohne Cron: Lauf in einer Seitenanfrage,
+# gedrosselt und mit Sperre. Ab Werk aus -- er macht die Seite eines Besuchers
+# langsamer und kann auf Instagram nicht lange warten.
+auto_share: false
+throttle_minutes: 5       # hoechstens alle N Minuten pruefen
+
+# Nach so vielen Fehlversuchen wird ein Kanal einer Seite nicht mehr
+# versucht. Ohne diese Bremse laeuft ein Bild, das Instagram nie annimmt, in
+# jedem Lauf erneut in die Wartezeit.
+max_attempts: 3
+
+# ── Text des Beitrags ──────────────────────────────────────
 # Platzhalter: {title} {summary} {url} {datum}  ({datum}: Kopffeld datum oder Seitendatum)
 message_template: "{title}\n\n{summary}"
+# Datumsformat fuer {datum} (PHP date()). Leer = was die Website fuer kurze
+# Datumsangaben eingestellt hat (system.pages.dateformat.short).
+date_format: ''

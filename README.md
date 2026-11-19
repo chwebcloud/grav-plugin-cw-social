@@ -38,7 +38,10 @@ routes you name (`/news`, `/events`) that use the page templates you name
 4. **Configure the plugin:** Admin → Plugins → *CHWEB Social*. Page ID,
    token, the **public site URL** (never localhost, never a staging domain),
    the routes and page templates, Instagram on or off, plugin enabled.
-5. **Test:** `bin/plugin cw-social test` prints the page name and, if
+5. **Make sure Grav's scheduler runs.** That is how the plugin posts: Admin →
+   Tools → Scheduler shows the cron line to install, and the job
+   *cw-social-share* appears there once the plugin is enabled.
+6. **Test:** `bin/plugin cw-social test` prints the page name and, if
    enabled, the connected Instagram account.
 
 ## Using it
@@ -48,12 +51,13 @@ Facebook*, *Share on Instagram* — and an optional text of your own. Below
 them a **preview** shows what each post will look like. It follows every
 change to title, summary, date, cover image and text **before you save**.
 
-The post goes out once the page is published and its date has arrived, either
-through the built-in worker (throttled, five minutes by default) or from the
-command line:
+The post goes out once the page is published and its date has arrived, on the
+next run of the scheduler job (every 15 minutes by default). The same run can
+be triggered by hand:
 
 ```bash
-bin/plugin cw-social share --force
+bin/plugin cw-social share            # dry run: what would go out
+bin/plugin cw-social share --force    # actually post
 ```
 
 A page carrying `draft: true` (or `entwurf: true`) in its front matter is left
@@ -61,45 +65,91 @@ alone for as long as that flag is there.
 
 Afterwards the preview shows, per channel, *shared on … · view post*. The post
 IDs are stored invisibly in the page front matter (`cw_social.fb_post_id`,
-`ig_post_id`, `ig_permalink` and timestamps), which is what keeps a later edit
-from posting the page a second time. If you do want it to go out again — as a
-reminder shortly before an event, say — the **Share again** switch sends it on
-the next save and then resets itself to No.
+`ig_post_id`, `ig_permalink` and timestamps) **and** in a journal under
+`user/data/cw-social/protokoll.json`. Either one is enough to keep a page from
+going out twice, which matters when `user/pages` is read-only — on a
+Git-deployed site the front matter cannot be written at all. If you do want it
+to go out again — as a reminder shortly before an event, say — the **Share
+again** switch sends it on the next run and then resets itself to No.
+
+### What has to be true before anything is posted
+
+Three things, checked on every run, in the scheduler and on the command line
+alike. If one of them is missing, nothing is posted and the reason is in the
+Grav log and in the preview:
+
+* **`site_url` is set.** There is deliberately no fallback to the host that
+  happens to be calling. A copy of the site on a staging domain that carries
+  the token would otherwise publish posts linking to that staging domain.
+* **The page ID and the token are there.**
+* **`user/data/cw-social/` is writable.** That is where the journal lives, and
+  the journal is what keeps a failed run from posting the same page again.
+
+Each page and channel is tried at most **three times** (`max_attempts`). After
+that the channel is left alone and the reason stays in the log. Without that
+brake, an image Instagram will never accept keeps every run waiting for it.
+
+## Without a scheduler
+
+On an installation with no cron, `auto_share: true` lets the plugin check
+during a page request instead — throttled to once every few minutes and under
+a lock, so two simultaneous requests cannot both post. It is **off by
+default**: it makes a visitor's request slower, and it cannot wait as long as
+Instagram sometimes needs.
 
 ## What Instagram requires
 
 * **An image on the page**: the cover image, or else the first image found.
   The plugin serves it to Instagram as JPEG through the public site URL —
   Instagram rejects PNG and WebP, so they are converted.
-* **An aspect ratio** between 4:5 (portrait) and 1.91:1 (landscape), at least
-  320 pixels wide. A panorama is refused; the error then appears in the Grav
-  log and the ID in the tab stays empty.
+* **An aspect ratio** between 4:5 (0.80) and 1.91:1, at least 320 pixels wide.
+  The plugin measures the image itself and does not even open a media
+  container for one that cannot work; the reason goes to the Grav log and that
+  channel is not tried again for this page.
 * The plugin waits up to nine seconds for Instagram to process the image. If
   it takes longer, the next run picks it up again.
 
 ## Staging and development
 
-Nothing may ever be posted from a workstation or a staging domain. Put this
-in `user/env/<host>/config/plugins/cw-social.yaml` there:
+Nothing may ever be posted from a workstation or a staging domain. Two things
+see to that, and the first needs no setting at all: **without `site_url`
+nothing is posted**, and a copy of the site normally has no `site_url` of its
+own. Where a copy did inherit the live configuration, put this in
+`user/env/<host>/config/plugins/cw-social.yaml`:
 
 ```yaml
+scheduler: false
 auto_share: false
 ```
 
-The tabs and switches stay visible, the worker stays quiet. Only the live
-environment posts — and only when `site_url` is the live address, otherwise
-the posts point nowhere.
+The tabs and switches stay visible, nothing goes out.
 
-## Why a worker instead of a save hook
+## Why a scheduler job instead of a save hook
 
-The worker checks at runtime rather than hooking into the save. That way
-sharing works no matter *how* a page comes into being — the classic admin, the
-API, a file upload, a Git sync — and a publication date in the future is
-actually waited for instead of being posted the moment somebody presses save.
+Posting is not hooked into the save. That way sharing works no matter *how* a
+page comes into being — the classic admin, the API, a file upload, a Git sync
+— and a publication date in the future is actually waited for instead of being
+posted the moment somebody presses save.
+
+## The preview field
+
+The preview is a single Web Component in `admin-next/fields/`, loaded by
+Admin 2.0 like any other field file. It evaluates no code of its own, so it
+also works where Admin 2.0 runs with a Content Security Policy. One
+consequence worth knowing: after updating the plugin, the admin needs one
+reload before a new preview takes effect.
+
+It reads the neighbouring fields out of the form, because Admin 2.0 hands a
+Web Component only its own value. When it cannot recognise them — a changed
+admin markup would do it — it says so and falls back to previewing the saved
+state instead of showing nothing.
+
+The endpoint behind it (`POST /cw-social/vorschau`) requires `api.pages.read`
+and honours the page's own access rules.
 
 ## Requirements
 
-Grav ≥ 1.7, tested on Grav 1.7 and 2.0. PHP with cURL and GD.
+Grav ≥ 1.7, tested on Grav 1.7 and 2.0. PHP 7.4 or newer with cURL and GD.
 
 ## Licence
 

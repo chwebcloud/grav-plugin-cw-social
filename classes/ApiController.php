@@ -11,10 +11,9 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Admin-2.0-Endpunkte von cw-social (Grav 2.0 / api-Plugin).
+ * Admin-2.0-Endpunkt von cw-social (Grav 2.0 / api-Plugin).
  *
- *   GET  /cw-social/kern/{name}   -> kern()      (api.access)  Kern einer Admin-Komponente
- *   POST /cw-social/vorschau      -> vorschau()  (api.access)  Beitrags-Vorschau mit ungespeicherten Werten
+ *   POST /cw-social/vorschau  -> vorschau()  (api.pages.read + Seitenrechte)
  *
  * Die Vorschau rechnet dieselben Dinge wie der ShareWorker (Text, Link,
  * Bild), nur mit den Werten, die gerade im Formular stehen -- bevor
@@ -23,38 +22,20 @@ use Psr\Http\Message\ServerRequestInterface;
 class ApiController extends AbstractApiController
 {
     /**
-     * Kern einer Admin-Komponente ausliefern (Huelle/Kern-Muster, damit ein
-     * Update ohne Neuladen des Admins gilt). no-cache + ETag: unveraendert = 304.
-     */
-    public function kern(ServerRequestInterface $request): ResponseInterface
-    {
-        $this->requirePermission($request, 'api.access');
-
-        $name  = preg_replace('/[^a-z0-9-]/', '', strtolower((string) ($request->getAttribute('route_params', [])['name'] ?? '')));
-        $datei = dirname(__DIR__) . '/admin-next/kern/' . $name . '.js';
-        if ($name === '' || !is_file($datei)) {
-            return ErrorResponse::create(404, 'Not found', "No core named {$name}.");
-        }
-        $etag    = '"' . md5($name . ':' . (@filemtime($datei) ?: 0) . ':' . (@filesize($datei) ?: 0)) . '"';
-        $headers = [
-            'Content-Type'  => 'application/javascript; charset=utf-8',
-            'Cache-Control' => 'private, no-cache',
-            'ETag'          => $etag,
-        ];
-        $mitgeschickt = array_map('trim', explode(',', $request->getHeaderLine('If-None-Match')));
-        if (in_array($etag, $mitgeschickt, true) || in_array('W/' . $etag, $mitgeschickt, true)) {
-            return new Response(304, $headers, '');
-        }
-        return new Response(200, $headers, (string) file_get_contents($datei));
-    }
-
-    /**
      * Vorschau der Beitraege fuer eine Seite.
      * POST /cw-social/vorschau  { route, title?, summary?, datum?, message?, bild?, share?, instagram? }
      * -> { seite, link, facebook: {aktiv, text, karte}, instagram: {aktiv, text, bild}, hinweise }
+     *
+     * Rechte: Die Antwort traegt Titel, Anriss und Bildadresse einer Seite --
+     * also deren Inhalt. Bis 1.5.1 genuegte dafuer `api.access`, und das gilt
+     * fuer jede Adresse, auch fuer unveroeffentlichte und zugangsbeschraenkte
+     * Seiten (getgrav/grav#4401, Punkt 4). Jetzt braucht es `api.pages.read`,
+     * und die Rechte der Seite selbst entscheiden mit.
      */
     public function vorschau(ServerRequestInterface $request): ResponseInterface
     {
+        // Erst das Tor zur API, damit die Suche nach der Seite nicht verraet,
+        // welche Adressen es gibt.
         $this->requirePermission($request, 'api.access');
 
         $body = $request->getParsedBody();
@@ -71,6 +52,7 @@ class ApiController extends AbstractApiController
         if (!$page) {
             return ErrorResponse::create(404, 'Not found', "No page at {$route}.");
         }
+        $this->authorizePageAction($request, $page, 'read', 'api.pages.read');
 
         require_once __DIR__ . '/ShareWorker.php';
         $cfg    = (array) $this->grav['config']->get('plugins.cw-social');
@@ -89,9 +71,16 @@ class ApiController extends AbstractApiController
         $igAn   = array_key_exists('instagram', $body) ? (bool) (int) $body['instagram'] : !empty($social['instagram']);
         $igMoeglich = !empty($cfg['instagram']);
 
+        // Was dem Teilen im Weg steht, gehoert in die Vorschau -- sonst sieht
+        // der Redakteur einen vollstaendigen Beitrag und wundert sich, dass
+        // nichts rausgeht. Der Worker kennt dieselben Huerden; er schreibt sie
+        // englisch ins Protokoll, hier stehen sie in der Sprache des Admins.
         $hinweise = [];
         if (empty($cfg['page_id']) || empty($cfg['access_token'])) {
             $hinweise[] = self::text('HINWEIS_FB_OFFEN');
+        }
+        if (trim((string) ($cfg['site_url'] ?? '')) === '') {
+            $hinweise[] = self::text('HINWEIS_SITE_URL');
         }
         if ($igAn && $igMoeglich && $d['bild'] === '') {
             $hinweise[] = self::text('HINWEIS_IG_BILD');
@@ -105,9 +94,13 @@ class ApiController extends AbstractApiController
         }
 
         $host = (string) parse_url($d['link'], PHP_URL_HOST);
+        // Als ISO-Zeitstempel, nicht als fertiger Text: Bis 1.5.1 stand hier
+        // `d.m.Y, H:i`, und das ist die Schreibweise einer Gegend, nicht die
+        // der Benutzerin (getgrav/grav#4401, Punkt 6). Die Vorschau formt ihn
+        // mit der Sprache des Admins.
         $wann = static function ($iso): string {
             $ts = is_string($iso) && $iso !== '' ? strtotime($iso) : false;
-            return $ts ? date('d.m.Y, H:i', $ts) : '';
+            return $ts ? date('c', $ts) : '';
         };
         return ApiResponse::create([
             'seite' => (string) ($this->grav['config']->get('site.title') ?: $host),
@@ -121,7 +114,11 @@ class ApiController extends AbstractApiController
                 'instagram' => [
                     'geteilt' => !empty($social['ig_post_id']),
                     'am'      => $wann($social['ig_posted_at'] ?? ''),
-                    'url'     => (string) ($social['ig_permalink'] ?? ''),
+                    // Der Permalink kommt aus dem Kopf der Seite, den ein
+                    // Redakteur schreiben kann, und landet im Admin in einem
+                    // href. Nur https:// (getgrav/grav#4401, Punkt 5) -- die
+                    // Vorschau prueft es ein zweites Mal.
+                    'url'     => self::nurHttps((string) ($social['ig_permalink'] ?? '')),
                 ],
             ],
             'facebook' => [
@@ -170,6 +167,16 @@ class ApiController extends AbstractApiController
         } catch (\Throwable $e) {
             $this->grav['log']->warning('cw-social bootPages: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Eine Adresse nur dann durchlassen, wenn sie mit https:// beginnt.
+     * `javascript:` in einem href laeuft, sobald ein Admin darauf klickt.
+     */
+    private static function nurHttps(string $url): string
+    {
+        $url = trim($url);
+        return strncasecmp($url, 'https://', 8) === 0 ? $url : '';
     }
 
     /**
