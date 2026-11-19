@@ -1,0 +1,3 @@
+# Grav legt beim Lauf eines CLI-Befehls aus diesem Ordner einen Cache an.
+# Der gehoert nicht ins Plugin.
+cache/
